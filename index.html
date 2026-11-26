@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Solar & XH-3002 Fan Circuit Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0b0e14;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #e6edf3;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .panel {
+            position: absolute;
+            background: rgba(15, 20, 29, 0.86);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+            z-index: 10;
+        }
+
+        #top-left {
+            top: 14px;
+            left: 14px;
+            max-width: 310px;
+        }
+
+        #top-left h1 {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #58a6ff;
+            letter-spacing: 0.3px;
+        }
+
+        #top-left p {
+            margin: 0 0 10px 0;
+            font-size: 11.5px;
+            color: #9ba7b4;
+            line-height: 1.4;
+        }
+
+        .cam-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .btn {
+            background: #1f2937;
+            color: #e6edf3;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background: #2d3b4e;
+            border-color: #58a6ff;
+        }
+
+        .btn.active {
+            background: #1d4ed8;
+            border-color: #60a5fa;
+        }
+
+        .btn.danger {
+            background: #4c1d24;
+            border-color: #f87171;
+            color: #fecaca;
+        }
+
+        .btn.danger:hover {
+            background: #7f1d1d;
+        }
+
+        .btn.warn {
+            background: #422c10;
+            border-color: #f59e0b;
+            color: #fde68a;
+        }
+
+        .btn.warn:hover {
+            background: #694312;
+        }
+
+        #right-panel {
+            top: 14px;
+            right: 14px;
+            width: 295px;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #8b949e;
+            margin: 12px 0 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 4px;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-row {
+            margin-bottom: 10px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .val-badge {
+            font-family: 'Consolas', monospace;
+            color: #58a6ff;
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .tele-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 7px;
+            padding: 6px 8px;
+        }
+
+        .tele-label {
+            font-size: 10px;
+            color: #8b949e;
+        }
+
+        .tele-val {
+            font-family: 'Consolas', monospace;
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-top: 2px;
+            color: #f0f6fc;
+        }
+
+        .tele-val.good {
+            color: #3fb950;
+        }
+
+        .tele-val.warn {
+            color: #d29922;
+        }
+
+        .tele-val.bad {
+            color: #f85149;
+        }
+
+        .switch-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 7px;
+            font-size: 12px;
+        }
+
+        #tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(10, 14, 22, 0.94);
+            border: 1px solid #58a6ff;
+            color: #f0f6fc;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.35;
+            display: none;
+            z-index: 25;
+            max-width: 240px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        #bottom-bar {
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 7px 14px;
+            font-size: 11.5px;
+            color: #9ba7b4;
+            white-space: nowrap;
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        #right-panel::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        #right-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="top-left" class="panel">
+        <h1>3D Solar Cooling Circuit Sim</h1>
+        <p>Click 3D switches, fuses, controller &amp; XH-3002 buttons directly. Drag to orbit, scroll to zoom.</p>
+        <div class="cam-buttons">
+            <button class="btn active" onclick="setCameraView('3d', this)">3D Workbench</button>
+            <button class="btn" onclick="setCameraView('top', this)">Schematic Top</button>
+            <button class="btn" onclick="setCameraView('xh', this)">XH-3002</button>
+            <button class="btn" onclick="setCameraView('fans', this)">12V Fans</button>
+        </div>
+    </div>
+
+    <div id="right-panel" class="panel">
+        <div class="section-title">Environment</div>
+        <div class="control-row">
+            <div class="control-header">
+                <span>☀️ Sunlight Intensity</span>
+                <span class="val-badge" id="lbl-sun">80%</span>
+            </div>
+            <input type="range" id="sl-sun" min="0" max="100" value="80" />
+        </div>
+        <div class="control-row">
+            <div class="control-header">
+                <span>🌡️ Probe Temperature</span>
+                <span class="val-badge" id="lbl-temp">28.7°C</span>
+            </div>
+            <input type="range" id="sl-temp" min="15" max="45" step="0.1" value="28.7" />
+        </div>
+        <div class="control-row">
+            <div class="control-header">
+                <span>🔋 Battery State of Charge</span>
+                <span class="val-badge" id="lbl-soc">75%</span>
+            </div>
+            <input type="range" id="sl-soc" min="0" max="100" value="75" />
+        </div>
+
+        <div class="section-title">Quick Controls</div>
+        <div class="switch-row">
+            <span>2-Pin Power Switch</span>
+            <button class="btn" id="hud-sw2" onclick="toggle2Pin()">ON</button>
+        </div>
+        <div class="switch-row">
+            <span>3-Pin Mode Switch</span>
+            <button class="btn" id="hud-sw3" onclick="cycle3Pin()">AUTO</button>
+        </div>
+        <div class="switch-row">
+            <span>XH-3002 Start / Stop</span>
+            <span class="val-badge" id="lbl-xh-set">28.0° / 25.0°</span>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <button class="btn" style="flex:1;" onclick="adjustXhSet(-0.5)">Start -0.5°</button>
+            <button class="btn" style="flex:1;" onclick="adjustXhSet(0.5)">Start +0.5°</button>
+        </div>
+
+        <div class="section-title">Fuses &amp; Fault Testing</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn warn" id="hud-f1" onclick="toggleFuse('batt')">Batt Fuse: OK</button>
+            <button class="btn warn" id="hud-f2" onclick="toggleFuse('load')">Load Fuse: OK</button>
+            <button class="btn danger" style="width:100%;" onclick="triggerOvercurrent()">⚡ Simulate 4.5A Short (Blow 3A
+                Load Fuse)</button>
+        </div>
+
+        <div class="section-title">Live Telemetry</div>
+        <div class="telemetry-grid">
+            <div class="tele-card">
+                <div class="tele-label">Solar PV</div>
+                <div class="tele-val" id="tel-pv">19.2V / 1.1A</div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-label">Battery</div>
+                <div class="tele-val" id="tel-batt">13.1V</div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-label">Load Output</div>
+                <div class="tele-val" id="tel-load">0.50A</div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-label">XH-3002 Relay</div>
+                <div class="tele-val" id="tel-relay">CLOSED</div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-label">Fan Speed</div>
+                <div class="tele-val" id="tel-fan">2400 RPM</div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-label">System Status</div>
+                <div class="tele-val good" id="tel-stat">CHARGING</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottom-bar" class="panel">
+        <span class="legend-dot" style="background:#f48888;"></span>Positive (+12V) &nbsp;&nbsp;
+        <span class="legend-dot" style="background:#22dd44;"></span>Negative (GND Return) &nbsp;&nbsp;
+        <span class="legend-dot" style="background:#ffe066;"></span>Conventional Current (+ to -) &nbsp;|&nbsp;
+        Click 3D switches/fuses/buttons
+    </div>
+
+    <div id="tooltip"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // =========================================================================
+        // 1. CIRCUIT SIMULATION STATE
+        // =========================================================================
+        const sim = {
+            sunlight: 0.80,
+            temp: 28.7,
+            soc: 75,
+            battVoltage: 13.0,
+            pvVoltage: 19.2,
+            pvCurrent: 0,
+            netBattCurrent: 0,       // > 0 means charging INTO battery, < 0 means discharging OUT
+            loadCurrent: 0,
+
+            battFuseState: 'ok',     // 'ok' | 'removed' | 'blown'
+            loadFuseState: 'ok',     // 'ok' | 'removed' | 'blown'
+            controllerLoadOn: true,
+            switch2PinOn: true,
+            switch3PinMode: 'AUTO',  // 'MANUAL' | 'OFF' | 'AUTO'
+
+            xhPowered: false,
+            xhStartTemp: 28.0,
+            xhStopTemp: 25.0,
+            xhRelayClosed: false,
+            xhMenuMode: 0,
+            xhMenuTimer: 0,
+
+            fansVoltage: 0,
+            fanRPM: 0,
+            fanAngle: 0,
+            statusText: 'READY'
+        };
+
+        // =========================================================================
+        // 2. THREE.JS SCENE SETUP
+        // =========================================================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b0e14);
+        scene.fog = new THREE.FogExp2(0x0b0e14, 0.016);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(0, 18, 21);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.maxPolarAngle = Math.PI / 2 - 0.04;
+        controls.minDistance = 6;
+        controls.maxDistance = 45;
+        controls.target.set(0, 0.5, 0);
+
+        const ambientLight = new THREE.AmbientLight(0x9fb3c8, 0.55);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
+        sunLight.position.set(-14, 20, 10);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 1;
+        sunLight.shadow.camera.far = 60;
+        const d = 18;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        const rimLight = new THREE.DirectionalLight(0x58a6ff, 0.35);
+        rimLight.position.set(14, 8, -12);
+        scene.add(rimLight);
+
+        const bench = new THREE.Mesh(
+            new THREE.BoxGeometry(32, 0.6, 19),
+            new THREE.MeshStandardMaterial({ color: 0x131720, roughness: 0.85, metalness: 0.1 })
+        );
+        bench.position.set(0, -0.3, 0);
+        bench.receiveShadow = true;
+        scene.add(bench);
+
+        const gridHelper = new THREE.GridHelper(30, 30, 0x263142, 0x1b222e);
+        gridHelper.position.y = 0.005;
+        scene.add(gridHelper);
+
+        const interactives = [];
+        function registerInteractive(mesh, label, handler) {
+            mesh.userData.interactive = true;
+            mesh.userData.label = label;
+            mesh.userData.onClick = handler;
+            interactives.push(mesh);
+        }
+
+        function addBoardLabel(text, x, z, width = 4.2) {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 96;
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, c.width, c.height);
+            ctx.font = 'bold 34px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#c9d1d9';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 256, 48);
+
+            const tex = new THREE.CanvasTexture(c);
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(width, width * (96 / 512)), mat);
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.set(x, 0.015, z);
+            scene.add(plane);
+        }
+
+        // =========================================================================
+        // 3. BUILD 3D CIRCUIT COMPONENTS
+        // =========================================================================
+        // --- A. SOLAR CHARGE CONTROLLER ---
+        const ctrlGroup = new THREE.Group();
+        ctrlGroup.position.set(-7.5, 0, -4.8);
+        scene.add(ctrlGroup);
+        addBoardLabel('Solar Charge Controller', -7.5, -7.2, 4.6);
+
+        const ctrlBody = new THREE.Mesh(
+            new THREE.BoxGeometry(4.4, 1.1, 3.4),
+            new THREE.MeshStandardMaterial({ color: 0x1a1f26, roughness: 0.5 })
+        );
+        ctrlBody.position.y = 0.55;
+        ctrlBody.castShadow = true;
+        ctrlBody.receiveShadow = true;
+        ctrlGroup.add(ctrlBody);
+
+        const ctrlFace = new THREE.Mesh(
+            new THREE.BoxGeometry(3.8, 0.08, 2.8),
+            new THREE.MeshStandardMaterial({ color: 0x1d75cc, roughness: 0.35 })
+        );
+        ctrlFace.position.set(0, 1.12, -0.05);
+        ctrlGroup.add(ctrlFace);
+
+        const lcdCanvas = document.createElement('canvas');
+        lcdCanvas.width = 256;
+        lcdCanvas.height = 160;
+        const lcdCtx = lcdCanvas.getContext('2d');
+        const lcdTex = new THREE.CanvasTexture(lcdCanvas);
+        const lcdMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.6, 1.05),
+            new THREE.MeshBasicMaterial({ map: lcdTex })
+        );
+        lcdMesh.rotation.x = -Math.PI / 2;
+        lcdMesh.position.set(-0.2, 1.17, -0.35);
+        ctrlGroup.add(lcdMesh);
+
+        for (let i = 0; i < 2; i++) {
+            const usb = new THREE.Mesh(
+                new THREE.BoxGeometry(0.65, 0.14, 0.35),
+                new THREE.MeshStandardMaterial({ color: 0xc0c8d0, metalness: 0.7, roughness: 0.3 })
+            );
+            usb.position.set(1.2, 1.15, -0.6 + i * 0.55);
+            ctrlGroup.add(usb);
+        }
+
+        for (let i = 0; i < 3; i++) {
+            const cBtn = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.18, 0.18, 0.14, 16),
+                new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.4 })
+            );
+            cBtn.position.set(-0.9 + i * 0.7, 1.16, 0.55);
+            ctrlGroup.add(cBtn);
+            if (i === 2) {
+                registerInteractive(cBtn, () => `Charge Controller Load Button (Currently: ${sim.controllerLoadOn ? 'ON' : 'OFF'})`, () => {
+                    sim.controllerLoadOn = !sim.controllerLoadOn;
+                });
+            }
+        }
+
+        const termXs = [-1.4, -0.84, -0.28, 0.28, 0.84, 1.4];
+        termXs.forEach(tx => {
+            const block = new THREE.Mesh(
+                new THREE.BoxGeometry(0.45, 0.45, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x111418 })
+            );
+            block.position.set(tx, 0.35, 1.65);
+            ctrlGroup.add(block);
+
+            const screw = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.12, 0.15, 12),
+                new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.25 })
+            );
+            screw.position.set(tx, 0.6, 1.65);
+            ctrlGroup.add(screw);
+        });
+
+        // --- B. SOLAR PANEL ---
+        const panelGroup = new THREE.Group();
+        panelGroup.position.set(-11.2, 0, 0.0);
+        scene.add(panelGroup);
+        addBoardLabel('Solar Panel', -11.2, -2.5, 3.2);
+
+        const standMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, metalness: 0.5 });
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), standMat);
+        legL.position.set(-1.3, 0.45, -1.0);
+        panelGroup.add(legL);
+        const legR = legL.clone();
+        legR.position.x = 1.3;
+        panelGroup.add(legR);
+
+        const panelTilt = new THREE.Group();
+        panelTilt.position.set(0, 0.65, 0);
+        panelTilt.rotation.x = 0.28;
+        panelGroup.add(panelTilt);
+
+        const frame = new THREE.Mesh(
+            new THREE.BoxGeometry(4.2, 0.18, 3.1),
+            new THREE.MeshStandardMaterial({ color: 0xb8c0cc, metalness: 0.75, roughness: 0.3 })
+        );
+        frame.castShadow = true;
+        panelTilt.add(frame);
+
+        const pvCanvas = document.createElement('canvas');
+        pvCanvas.width = 512;
+        pvCanvas.height = 384;
+        const pCtx = pvCanvas.getContext('2d');
+        pCtx.fillStyle = '#0d2247';
+        pCtx.fillRect(0, 0, 512, 384);
+        const cols = 6, rows = 4;
+        const cw = 512 / cols, ch = 384 / rows;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                pCtx.fillStyle = '#12326b';
+                pCtx.fillRect(c * cw + 3, r * ch + 3, cw - 6, ch - 6);
+                pCtx.strokeStyle = 'rgba(180,210,255,0.28)';
+                pCtx.lineWidth = 1.5;
+                pCtx.beginPath();
+                pCtx.moveTo(c * cw + cw * 0.33, r * ch + 3);
+                pCtx.lineTo(c * cw + cw * 0.33, (r + 1) * ch - 3);
+                pCtx.moveTo(c * cw + cw * 0.66, r * ch + 3);
+                pCtx.lineTo(c * cw + cw * 0.66, (r + 1) * ch - 3);
+                pCtx.stroke();
+            }
+        }
+        const pvTex = new THREE.CanvasTexture(pvCanvas);
+        const pvSurface = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.9, 2.8),
+            new THREE.MeshStandardMaterial({ map: pvTex, roughness: 0.18, metalness: 0.35 })
+        );
+        pvSurface.rotation.x = -Math.PI / 2;
+        pvSurface.position.y = 0.095;
+        panelTilt.add(pvSurface);
+
+        // --- C. 12V DC BATTERY PACK ---
+        const battGroup = new THREE.Group();
+        battGroup.position.set(-8.2, 0, 5.6);
+        scene.add(battGroup);
+        addBoardLabel('12V DC Battery', -8.2, 7.6, 3.6);
+
+        const cellMat = new THREE.MeshStandardMaterial({ color: 0x7a8594, metalness: 0.65, roughness: 0.28 });
+        const capMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.2 });
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6 });
+
+        for (let r = 0; r < 2; r++) {
+            for (let c = 0; c < 3; c++) {
+                const cx = (c - 1) * 0.72;
+                const cz = (r - 0.5) * 0.72;
+                const cell = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1.8, 20), cellMat);
+                cell.position.set(cx, 0.9, cz);
+                cell.castShadow = true;
+                battGroup.add(cell);
+
+                const insul = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.05, 20), ringMat);
+                insul.position.set(cx, 1.81, cz);
+                battGroup.add(insul);
+
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 16), capMat);
+                cap.position.set(cx, 1.84, cz);
+                battGroup.add(cap);
+            }
+        }
+        const busbar = new THREE.Mesh(
+            new THREE.BoxGeometry(2.1, 0.04, 1.1),
+            new THREE.MeshStandardMaterial({ color: 0xb0b8c4, metalness: 0.85, roughness: 0.25 })
+        );
+        busbar.position.set(0, 1.88, 0);
+        battGroup.add(busbar);
+
+        // --- D. FUSES ---
+        function createFuse3D(x, z, type, labelPosZ) {
+            const fGroup = new THREE.Group();
+            fGroup.position.set(x, 0, z);
+            scene.add(fGroup);
+            addBoardLabel('Fuse 3A', x, labelPosZ, 2.4);
+
+            const holder = new THREE.Mesh(
+                new THREE.BoxGeometry(1.1, 0.32, 0.8),
+                new THREE.MeshStandardMaterial({ color: 0x1f242c, roughness: 0.7 })
+            );
+            holder.position.y = 0.16;
+            holder.castShadow = true;
+            fGroup.add(holder);
+
+            const bladeGroup = new THREE.Group();
+            bladeGroup.position.y = 0.35;
+            fGroup.add(bladeGroup);
+
+            const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.85, roughness: 0.2 });
+            const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.35, 0.08), bladeMat);
+            b1.position.set(-0.24, 0, 0);
+            bladeGroup.add(b1);
+            const b2 = b1.clone();
+            b2.position.x = 0.24;
+            bladeGroup.add(b2);
+
+            const plasticMat = new THREE.MeshPhysicalMaterial({
+                color: 0xe66a1c,
+                transparent: true,
+                opacity: 0.78,
+                roughness: 0.2
+            });
+            const fuseBody = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.55, 0.24), plasticMat);
+            fuseBody.position.y = 0.4;
+            fuseBody.castShadow = true;
+            bladeGroup.add(fuseBody);
+
+            const filMat = new THREE.MeshBasicMaterial({ color: 0xffd580 });
+            const filament = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.04), filMat);
+            filament.position.y = 0.42;
+            bladeGroup.add(filament);
+
+            registerInteractive(
+                fuseBody,
+                () => `${type === 'batt' ? 'Battery' : 'Load'} 3A Fuse (State: ${(type === 'batt' ? sim.battFuseState : sim.loadFuseState).toUpperCase()}) — Click to toggle/replace`,
+                () => toggleFuse(type)
+            );
+
+            return { group: fGroup, bladeGroup, plasticMat, filament, filMat };
+        }
+
+        const battFuse3D = createFuse3D(-8.2, 2.7, 'batt', 3.55);
+        const loadFuse3D = createFuse3D(-3.4, 1.4, 'load', 2.3);
+
+        // --- E. 2-PIN ROCKER SWITCH ---
+        const sw2Group = new THREE.Group();
+        sw2Group.position.set(-0.8, 0, 1.4);
+        scene.add(sw2Group);
+        addBoardLabel('2 Pin Switch', -0.8, 2.65, 2.8);
+
+        const sw2Housing = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.65, 0.65, 0.7, 24),
+            new THREE.MeshStandardMaterial({ color: 0x16191f, roughness: 0.55 })
+        );
+        sw2Housing.position.y = 0.35;
+        sw2Housing.castShadow = true;
+        sw2Group.add(sw2Housing);
+
+        const sw2Bezel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.75, 0.75, 0.12, 24),
+            new THREE.MeshStandardMaterial({ color: 0x222730, roughness: 0.4 })
+        );
+        sw2Bezel.position.y = 0.72;
+        sw2Group.add(sw2Bezel);
+
+        const sw2Pivot = new THREE.Group();
+        sw2Pivot.position.y = 0.76;
+        sw2Group.add(sw2Pivot);
+
+        const rockerCanvas = document.createElement('canvas');
+        rockerCanvas.width = 128;
+        rockerCanvas.height = 128;
+        const rCtx = rockerCanvas.getContext('2d');
+        rCtx.fillStyle = '#11151b';
+        rCtx.fillRect(0, 0, 128, 128);
+        rCtx.strokeStyle = '#ffffff';
+        rCtx.lineWidth = 8;
+        rCtx.beginPath();
+        rCtx.moveTo(64, 20); rCtx.lineTo(64, 46);
+        rCtx.stroke();
+        rCtx.beginPath();
+        rCtx.arc(64, 92, 13, 0, Math.PI * 2);
+        rCtx.stroke();
+
+        const rockerMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.78, 0.28, 0.92),
+            [
+                new THREE.MeshStandardMaterial({ color: 0x11151b }),
+                new THREE.MeshStandardMaterial({ color: 0x11151b }),
+                new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(rockerCanvas), roughness: 0.4 }),
+                new THREE.MeshStandardMaterial({ color: 0x11151b }),
+                new THREE.MeshStandardMaterial({ color: 0x11151b }),
+                new THREE.MeshStandardMaterial({ color: 0x11151b })
+            ]
+        );
+        rockerMesh.position.y = 0.08;
+        sw2Pivot.add(rockerMesh);
+
+        registerInteractive(rockerMesh, () => `2-Pin Master Switch (${sim.switch2PinOn ? 'ON' : 'OFF'}) — Click to toggle`, toggle2Pin);
+
+        // --- F. 3-PIN TOGGLE SWITCH ---
+        const sw3Group = new THREE.Group();
+        sw3Group.position.set(3.2, 0, -3.5);
+        scene.add(sw3Group);
+        addBoardLabel('3 Pin Switch', 3.2, -5.0, 2.8);
+
+        const sw3Body = new THREE.Mesh(
+            new THREE.BoxGeometry(1.1, 0.65, 0.7),
+            new THREE.MeshStandardMaterial({ color: 0x1f6feb, roughness: 0.4 })
+        );
+        sw3Body.position.y = 0.35;
+        sw3Body.castShadow = true;
+        sw3Group.add(sw3Body);
+
+        [-0.35, 0, 0.35].forEach(px => {
+            const pin = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 0.14, 0.35),
+                new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.85 })
+            );
+            pin.position.set(px, 0.18, 0.45);
+            sw3Group.add(pin);
+        });
+
+        const bushing = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.24, 0.24, 0.38, 16),
+            new THREE.MeshStandardMaterial({ color: 0xc8d1dc, metalness: 0.85, roughness: 0.25 })
+        );
+        bushing.position.y = 0.82;
+        sw3Group.add(bushing);
+
+        const sw3LeverPivot = new THREE.Group();
+        sw3LeverPivot.position.y = 0.95;
+        sw3Group.add(sw3LeverPivot);
+
+        const lever = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.11, 0.07, 0.95, 16),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 })
+        );
+        lever.position.y = 0.45;
+        lever.castShadow = true;
+        sw3LeverPivot.add(lever);
+
+        const leverTip = new THREE.Mesh(
+            new THREE.SphereGeometry(0.11, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 })
+        );
+        leverTip.position.y = 0.93;
+        sw3LeverPivot.add(leverTip);
+
+        const modeCanvas = document.createElement('canvas');
+        modeCanvas.width = 256;
+        modeCanvas.height = 64;
+        const mCtx = modeCanvas.getContext('2d');
+        mCtx.fillStyle = '#18202c';
+        mCtx.fillRect(0, 0, 256, 64);
+        mCtx.font = 'bold 24px sans-serif';
+        mCtx.fillStyle = '#93c5fd';
+        mCtx.fillText('MAN', 12, 40);
+        mCtx.fillStyle = '#9ca3af';
+        mCtx.fillText('OFF', 104, 40);
+        mCtx.fillStyle = '#6ee7b7';
+        mCtx.fillText('AUTO', 182, 40);
+        const modePlate = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.7, 0.42),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(modeCanvas) })
+        );
+        modePlate.rotation.x = -Math.PI / 2;
+        modePlate.position.set(0, 0.02, -0.78);
+        sw3Group.add(modePlate);
+
+        registerInteractive(sw3Body, () => `3-Pin Mode Switch (${sim.switch3PinMode}) — Click to cycle MAN / OFF / AUTO`, cycle3Pin);
+        registerInteractive(lever, () => `3-Pin Mode Switch (${sim.switch3PinMode}) — Click to cycle MAN / OFF / AUTO`, cycle3Pin);
+
+        // --- G. XH-3002 DIGITAL TEMPERATURE CONTROLLER ---
+        const xhGroup = new THREE.Group();
+        xhGroup.position.set(3.2, 0, 2.2);
+        scene.add(xhGroup);
+        addBoardLabel('XH-3002 Temperature Controller', 3.2, 0.15, 4.6);
+
+        const xhBody = new THREE.Mesh(
+            new THREE.BoxGeometry(3.2, 1.25, 2.3),
+            new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.35 })
+        );
+        xhBody.position.y = 0.625;
+        xhBody.castShadow = true;
+        xhBody.receiveShadow = true;
+        xhGroup.add(xhBody);
+
+        const xhBezel = new THREE.Mesh(
+            new THREE.BoxGeometry(2.7, 0.06, 1.8),
+            new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.5 })
+        );
+        xhBezel.position.set(0, 1.26, 0);
+        xhGroup.add(xhBezel);
+
+        const xhCanvas = document.createElement('canvas');
+        xhCanvas.width = 256;
+        xhCanvas.height = 128;
+        const xhCtx = xhCanvas.getContext('2d');
+        const xhTex = new THREE.CanvasTexture(xhCanvas);
+        const xhDisplay = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.85, 0.85),
+            new THREE.MeshBasicMaterial({ map: xhTex })
+        );
+        xhDisplay.rotation.x = -Math.PI / 2;
+        xhDisplay.position.set(0, 1.30, -0.28);
+        xhGroup.add(xhDisplay);
+
+        const xhBtnLabels = ['SET', '▲', '▼'];
+        const xhHandlers = [
+            () => {
+                if (!sim.xhPowered) return;
+                sim.xhMenuMode = (sim.xhMenuMode + 1) % 3;
+                sim.xhMenuTimer = 4.0;
+            },
+            () => {
+                if (!sim.xhPowered) return;
+                if (sim.xhMenuMode === 0) sim.xhMenuMode = 1;
+                if (sim.xhMenuMode === 1) sim.xhStartTemp = Math.min(45, +(sim.xhStartTemp + 0.5).toFixed(1));
+                if (sim.xhMenuMode === 2) sim.xhStopTemp = Math.min(45, +(sim.xhStopTemp + 0.5).toFixed(1));
+                sim.xhMenuTimer = 4.0;
+            },
+            () => {
+                if (!sim.xhPowered) return;
+                if (sim.xhMenuMode === 0) sim.xhMenuMode = 1;
+                if (sim.xhMenuMode === 1) sim.xhStartTemp = Math.max(15, +(sim.xhStartTemp - 0.5).toFixed(1));
+                if (sim.xhMenuMode === 2) sim.xhStopTemp = Math.max(15, +(sim.xhStopTemp - 0.5).toFixed(1));
+                sim.xhMenuTimer = 4.0;
+            }
+        ];
+
+        for (let i = 0; i < 3; i++) {
+            const btnC = document.createElement('canvas');
+            btnC.width = 64; btnC.height = 48;
+            const bCtx = btnC.getContext('2d');
+            bCtx.fillStyle = '#2563eb';
+            bCtx.fillRect(0, 0, 64, 48);
+            bCtx.fillStyle = '#ffffff';
+            bCtx.font = 'bold 22px sans-serif';
+            bCtx.textAlign = 'center';
+            bCtx.textBaseline = 'middle';
+            bCtx.fillText(xhBtnLabels[i], 32, 24);
+
+            const btn = new THREE.Mesh(
+                new THREE.BoxGeometry(0.55, 0.12, 0.38),
+                new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(btnC), roughness: 0.4 })
+            );
+            btn.position.set(-0.7 + i * 0.7, 1.31, 0.48);
+            xhGroup.add(btn);
+
+            registerInteractive(btn, `XH-3002 "${xhBtnLabels[i]}" Button`, xhHandlers[i]);
+        }
+
+        const probeCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(4.8, 0.5, 2.2),
+            new THREE.Vector3(5.6, 0.3, 1.8),
+            new THREE.Vector3(6.0, 0.15, 0.8)
+        ]);
+        scene.add(new THREE.Mesh(
+            new THREE.TubeGeometry(probeCurve, 16, 0.04, 8, false),
+            new THREE.MeshStandardMaterial({ color: 0x111418 })
+        ));
+        const probeTip = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.08, 0.45, 12),
+            new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.85, roughness: 0.2 })
+        );
+        probeTip.rotation.x = Math.PI / 2;
+        probeTip.position.set(6.0, 0.15, 0.6);
+        scene.add(probeTip);
+
+        // --- H. 2x FAN 12V DC ---
+        const fans = [];
+        function createFan3D(x, z, labelZ) {
+            const fGroup = new THREE.Group();
+            fGroup.position.set(x, 0, z);
+            scene.add(fGroup);
+            addBoardLabel('Fan 12V DC', x, labelZ, 3.0);
+
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x181b21, roughness: 0.55 });
+            const wallThickness = 0.24;
+            const size = 3.2;
+            const h = 0.75;
+
+            const topBar = new THREE.Mesh(new THREE.BoxGeometry(size, h, wallThickness), frameMat);
+            topBar.position.set(0, h / 2, -size / 2 + wallThickness / 2);
+            topBar.castShadow = true;
+            fGroup.add(topBar);
+
+            const botBar = topBar.clone();
+            botBar.position.z = size / 2 - wallThickness / 2;
+            fGroup.add(botBar);
+
+            const leftBar = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, h, size - wallThickness * 2), frameMat);
+            leftBar.position.set(-size / 2 + wallThickness / 2, h / 2, 0);
+            leftBar.castShadow = true;
+            fGroup.add(leftBar);
+
+            const rightBar = leftBar.clone();
+            rightBar.position.x = size / 2 - wallThickness / 2;
+            fGroup.add(rightBar);
+
+            const basePlate = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.38, 1.38, 0.08, 32),
+                new THREE.MeshStandardMaterial({ color: 0x101318, roughness: 0.8 })
+            );
+            basePlate.position.y = 0.04;
+            fGroup.add(basePlate);
+
+            const rotor = new THREE.Group();
+            rotor.position.y = 0.38;
+            fGroup.add(rotor);
+
+            rotor.add(new THREE.Mesh(
+                new THREE.CylinderGeometry(0.42, 0.42, 0.36, 24),
+                new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.4 })
+            ));
+            rotor.add(new THREE.Mesh(
+                new THREE.CylinderGeometry(0.28, 0.28, 0.37, 20),
+                new THREE.MeshStandardMaterial({ color: 0x2dd4bf, roughness: 0.3 })
+            ));
+
+            const bladeMat = new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.35 });
+            for (let i = 0; i < 9; i++) {
+                const bPivot = new THREE.Group();
+                bPivot.rotation.y = (i / 9) * Math.PI * 2;
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.04, 0.34), bladeMat);
+                blade.position.set(0.82, 0, 0);
+                blade.rotation.x = 0.45;
+                bPivot.add(blade);
+                rotor.add(bPivot);
+            }
+            return rotor;
+        }
+
+        fans.push(createFan3D(9.8, -2.8, -4.9));
+        fans.push(createFan3D(9.8, 2.8, 4.9));
+
+        // =========================================================================
+        // 4. 3D WIRING (CLOSED-LOOP CONVENTIONAL CURRENT DIRECTIONS)
+        // =========================================================================
+        const POS_COLOR = 0xe87b7b;
+        const NEG_COLOR = 0x22dd44;
+        const wireSegments = [];
+
+        function createWire(points, colorHex, segmentKey) {
+            const vecs = points.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+            const curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.12);
+            const geo = new THREE.TubeGeometry(curve, 36, 0.055, 8, false);
+            const mat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                roughness: 0.45,
+                emissive: colorHex,
+                emissiveIntensity: 0.08
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            scene.add(mesh);
+
+            const dotCount = Math.max(3, Math.floor(curve.getLength() * 1.4));
+            const dots = [];
+            const dotGeo = new THREE.SphereGeometry(0.085, 8, 8);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+            for (let i = 0; i < dotCount; i++) {
+                const dot = new THREE.Mesh(dotGeo, dotMat);
+                dot.visible = false;
+                scene.add(dot);
+                dots.push({ mesh: dot, t: i / dotCount });
+            }
+
+            wireSegments.push({ curve, mat, dots, key: segmentKey });
+        }
+
+        // 1. Solar Panel <-> Charge Controller (Closed loop: Panel+ -> Ctrl, Ctrl -> Panel-)
+        createWire([[-9.2, 0.35, -0.2], [-8.9, 0.18, -0.2], [-8.9, 0.18, -3.15]], POS_COLOR, 'pv');
+        createWire([[-8.34, 0.12, -3.15], [-8.34, 0.12, 0.4], [-9.2, 0.35, 0.4]], NEG_COLOR, 'pv');
+
+        // 2. Battery <-> Batt Fuse <-> Charge Controller
+        // Defined in DISCHARGING direction: Batt+ -> Fuse -> Ctrl Batt+, Ctrl Batt- -> Batt-
+        // (When charging, flowSpeed becomes negative so dots reverse!)
+        createWire([[-8.5, 1.85, 4.9], [-8.5, 0.18, 3.0], [-8.2, 0.35, 3.0]], POS_COLOR, 'batt');
+        createWire([[-8.2, 0.35, 2.4], [-7.78, 0.18, 1.5], [-7.78, 0.18, -3.15]], POS_COLOR, 'batt');
+        createWire([[-7.22, 0.12, -3.15], [-7.22, 0.12, 4.2], [-7.5, 1.85, 4.9]], NEG_COLOR, 'batt');
+
+        // 3. Controller Load+ -> Load Fuse -> 2-Pin Switch -> Split
+        createWire([[-6.66, 0.35, -3.15], [-6.66, 0.18, 1.4], [-3.9, 0.18, 1.4]], POS_COLOR, 'loadPre');
+        createWire([[-2.9, 0.18, 1.4], [-1.4, 0.18, 1.4]], POS_COLOR, 'loadPre');
+        createWire([[-0.2, 0.18, 1.4], [1.1, 0.18, 1.4]], POS_COLOR, 'loadPost');
+
+        // 4. Split -> 3-Pin Manual & XH-3002 Vin+, XH-3002 Vout+ -> 3-Pin Auto
+        createWire([[1.1, 0.18, 1.4], [1.1, 0.18, -2.5], [2.85, 0.18, -3.05]], POS_COLOR, 'manualBranch');
+        createWire([[1.1, 0.18, 1.4], [1.1, 0.18, 2.2], [1.6, 0.4, 2.2]], POS_COLOR, 'xhPower');
+        createWire([[4.8, 0.4, 2.2], [5.4, 0.18, 2.2], [5.4, 0.18, -2.5], [3.55, 0.18, -3.05]], POS_COLOR, 'autoBranch');
+
+        // 5. 3-Pin Switch Center -> Parallel Fans (+)
+        createWire([[3.2, 0.18, -3.05], [3.2, 0.18, -1.6], [6.8, 0.18, -1.6]], POS_COLOR, 'fans');
+        createWire([[6.8, 0.18, -1.6], [6.8, 0.18, -2.8], [8.2, 0.25, -2.8]], POS_COLOR, 'fans');
+        createWire([[6.8, 0.18, -1.6], [6.8, 0.18, 2.8], [8.2, 0.25, 2.8]], POS_COLOR, 'fans');
+
+        // 6. Negative (GND) Return Paths -> Back to Controller Load-
+        // Fan 1 & Fan 2 (-) return down the right rail to bottom ground bus
+        createWire([[11.4, 0.25, -2.8], [12.3, 0.12, -2.8], [12.3, 0.12, 2.8]], NEG_COLOR, 'fans');
+        createWire([[11.4, 0.25, 2.8], [12.3, 0.12, 2.8]], NEG_COLOR, 'fans');
+        createWire([[12.3, 0.12, 2.8], [12.3, 0.12, 5.2], [2.4, 0.12, 5.2]], NEG_COLOR, 'gndBusFans');
+
+        // XH-3002 Vin- returns to ground bus; Vout- ties to common ground bus (no external current)
+        createWire([[2.4, 0.12, 3.35], [2.4, 0.12, 5.2]], NEG_COLOR, 'xhPower');
+        createWire([[4.0, 0.12, 3.35], [4.0, 0.12, 5.2]], NEG_COLOR, 'idle');
+
+        // Main ground return from junction (x=2.4) back into Controller Load-
+        createWire([[2.4, 0.12, 5.2], [-6.1, 0.12, 5.2], [-6.1, 0.35, -3.15]], NEG_COLOR, 'gndBusMain');
+
+        // =========================================================================
+        // 5. PARTICLES: AIRFLOW & FUSE BLOW SPARKS
+        // =========================================================================
+        const airCount = 80;
+        const airPos = new Float32Array(airCount * 3);
+        const airData = [];
+        for (let i = 0; i < airCount; i++) {
+            const fanIdx = i < airCount / 2 ? 0 : 1;
+            const fz = fanIdx === 0 ? -2.8 : 2.8;
+            const angle = Math.random() * Math.PI * 2;
+            const rad = 0.45 + Math.random() * 0.85;
+            const x = 9.8 + Math.cos(angle) * rad;
+            const z = fz + Math.sin(angle) * rad;
+            const y = 0.5 + Math.random() * 2.5;
+            airPos[i * 3] = x;
+            airPos[i * 3 + 1] = y;
+            airPos[i * 3 + 2] = z;
+            airData.push({ fanIdx, x, z, speed: 1.5 + Math.random() * 1.5 });
+        }
+        const airGeo = new THREE.BufferGeometry();
+        airGeo.setAttribute('position', new THREE.BufferAttribute(airPos, 3));
+        const airMat = new THREE.PointsMaterial({ color: 0x7dd3fc, size: 0.12, transparent: true, opacity: 0.55 });
+        scene.add(new THREE.Points(airGeo, airMat));
+
+        const sparkCount = 40;
+        const sparkPos = new Float32Array(sparkCount * 3);
+        const sparkVels = Array.from({ length: sparkCount }, () => new THREE.Vector3());
+        const sparkGeo = new THREE.BufferGeometry();
+        sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+        const sparkMat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.18, transparent: true, opacity: 0 });
+        scene.add(new THREE.Points(sparkGeo, sparkMat));
+        let sparkLife = 0;
+
+        function spawnSparks(x, y, z) {
+            sparkLife = 0.9;
+            for (let i = 0; i < sparkCount; i++) {
+                sparkPos[i * 3] = x;
+                sparkPos[i * 3 + 1] = y;
+                sparkPos[i * 3 + 2] = z;
+                sparkVels[i].set((Math.random() - 0.5) * 6, 1.5 + Math.random() * 4.5, (Math.random() - 0.5) * 6);
+            }
+            sparkGeo.attributes.position.needsUpdate = true;
+        }
+
+        // =========================================================================
+        // 6. INTERACTION & CONTROLS
+        // =========================================================================
+        function toggle2Pin() { sim.switch2PinOn = !sim.switch2PinOn; updateHUD(); }
+
+        function cycle3Pin() {
+            const modes = ['MANUAL', 'OFF', 'AUTO'];
+            sim.switch3PinMode = modes[(modes.indexOf(sim.switch3PinMode) + 1) % modes.length];
+            updateHUD();
+        }
+
+        function toggleFuse(type) {
+            if (type === 'batt') sim.battFuseState = sim.battFuseState === 'ok' ? 'removed' : 'ok';
+            else sim.loadFuseState = sim.loadFuseState === 'ok' ? 'removed' : 'ok';
+            updateHUD();
+        }
+
+        function adjustXhSet(delta) {
+            sim.xhStartTemp = Math.min(45, Math.max(16, +(sim.xhStartTemp + delta).toFixed(1)));
+            sim.xhStopTemp = Math.min(44, Math.max(15, +(sim.xhStartTemp - 3.0).toFixed(1)));
+            updateHUD();
+        }
+
+        function triggerOvercurrent() {
+            if (sim.loadFuseState !== 'ok') { sim.loadFuseState = 'ok'; updateHUD(); return; }
+            if (sim.battFuseState !== 'ok' || !sim.controllerLoadOn) {
+                alert('Connect battery fuse and turn on Charge Controller load first!');
+                return;
+            }
+            sim.switch2PinOn = true;
+            sim.loadFuseState = 'blown';
+            spawnSparks(-3.4, 0.85, 1.4);
+            updateHUD();
+        }
+
+        document.getElementById('sl-sun').addEventListener('input', e => { sim.sunlight = parseFloat(e.target.value) / 100; updateHUD(); });
+        document.getElementById('sl-temp').addEventListener('input', e => { sim.temp = parseFloat(e.target.value); updateHUD(); });
+        document.getElementById('sl-soc').addEventListener('input', e => { sim.soc = parseFloat(e.target.value); updateHUD(); });
+
+        let camTween = null;
+        function setCameraView(preset, btn) {
+            document.querySelectorAll('.cam-buttons .btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const targets = {
+                '3d': { pos: [0, 17, 20], target: [0, 0.5, 0] },
+                'top': { pos: [0, 26, 0.01], target: [0, 0, 0] },
+                'xh': { pos: [3.2, 6.5, 8.2], target: [3.2, 0.6, 1.5] },
+                'fans': { pos: [9.8, 9.5, 9.5], target: [9.8, 0.5, 0] }
+            };
+            const t = targets[preset];
+            if (!t) return;
+            camTween = {
+                fromPos: camera.position.clone(),
+                toPos: new THREE.Vector3(...t.pos),
+                fromTgt: controls.target.clone(),
+                toTgt: new THREE.Vector3(...t.target),
+                progress: 0
+            };
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        const tooltip = document.getElementById('tooltip');
+        let downPos = { x: 0, y: 0 };
+
+        renderer.domElement.addEventListener('pointerdown', e => { downPos = { x: e.clientX, y: e.clientY }; });
+
+        renderer.domElement.addEventListener('pointermove', e => {
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObjects(interactives, false);
+            if (hits.length > 0) {
+                const obj = hits[0].object;
+                renderer.domElement.style.cursor = 'pointer';
+                tooltip.textContent = typeof obj.userData.label === 'function' ? obj.userData.label() : obj.userData.label;
+                tooltip.style.display = 'block';
+                tooltip.style.left = Math.min(window.innerWidth - 250, e.clientX + 14) + 'px';
+                tooltip.style.top = Math.min(window.innerHeight - 60, e.clientY + 14) + 'px';
+            } else {
+                renderer.domElement.style.cursor = 'grab';
+                tooltip.style.display = 'none';
+            }
+        });
+
+        renderer.domElement.addEventListener('pointerup', e => {
+            if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 6) return;
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObjects(interactives, false);
+            if (hits.length > 0 && hits[0].object.userData.onClick) {
+                hits[0].object.userData.onClick();
+                updateHUD();
+            }
+        });
+
+        // =========================================================================
+        // 7. PHYSICS & CANVAS TEXTURE UPDATES
+        // =========================================================================
+        function stepSimulation(dt) {
+            sim.pvVoltage = sim.sunlight > 0.02 ? 12.2 + 9.4 * Math.pow(sim.sunlight, 0.35) : 0;
+
+            const battOk = sim.battFuseState === 'ok';
+            sim.battVoltage = battOk ? (10.6 + (sim.soc / 100) * 3.6) : 0;
+
+            const controllerPowered = battOk && sim.soc > 5;
+            const loadBusAlive = controllerPowered && sim.controllerLoadOn && sim.loadFuseState === 'ok';
+            const postSwitchAlive = loadBusAlive && sim.switch2PinOn;
+            sim.xhPowered = postSwitchAlive;
+
+            if (sim.xhMenuTimer > 0) {
+                sim.xhMenuTimer -= dt;
+                if (sim.xhMenuTimer <= 0) sim.xhMenuMode = 0;
+            }
+
+            if (!sim.xhPowered) {
+                sim.xhRelayClosed = false;
+            } else {
+                if (sim.xhStartTemp >= sim.xhStopTemp) {
+                    if (sim.temp >= sim.xhStartTemp) sim.xhRelayClosed = true;
+                    else if (sim.temp <= sim.xhStopTemp) sim.xhRelayClosed = false;
+                } else {
+                    if (sim.temp <= sim.xhStartTemp) sim.xhRelayClosed = true;
+                    else if (sim.temp >= sim.xhStopTemp) sim.xhRelayClosed = false;
+                }
+            }
+
+            let fansOn = false;
+            if (postSwitchAlive) {
+                if (sim.switch3PinMode === 'MANUAL') fansOn = true;
+                else if (sim.switch3PinMode === 'AUTO' && sim.xhRelayClosed) fansOn = true;
+            }
+
+            sim.fansVoltage = fansOn ? sim.battVoltage : 0;
+            sim.fanRPM = fansOn ? Math.round((sim.fansVoltage / 12.6) * 2400) : 0;
+            sim.loadCurrent = (sim.xhPowered ? 0.04 : 0) + (fansOn ? 0.46 : 0);
+
+            // Solar PV supplies load first, excess charges battery
+            if (battOk && sim.pvVoltage > sim.battVoltage + 0.5) {
+                const maxPvAmp = sim.sunlight * 1.6;
+                const maxBattAccept = sim.soc < 99.8 ? (sim.soc > 85 ? ((100 - sim.soc) / 15) * maxPvAmp : maxPvAmp) : 0;
+                sim.pvCurrent = Math.min(maxPvAmp, sim.loadCurrent + maxBattAccept);
+                sim.netBattCurrent = sim.pvCurrent - sim.loadCurrent;
+            } else {
+                sim.pvCurrent = 0;
+                sim.netBattCurrent = battOk ? -sim.loadCurrent : 0;
+            }
+
+            if (battOk) {
+                sim.soc = Math.max(0, Math.min(100, sim.soc + sim.netBattCurrent * dt * 0.40));
+            }
+
+            if (!battOk) sim.statusText = 'NO BATTERY';
+            else if (sim.loadFuseState === 'blown') sim.statusText = 'FUSE BLOWN';
+            else if (sim.loadFuseState === 'removed') sim.statusText = 'LOAD FUSE OUT';
+            else if (sim.netBattCurrent > 0.02 && fansOn) sim.statusText = 'CHG + COOLING';
+            else if (sim.netBattCurrent > 0.02) sim.statusText = 'CHARGING';
+            else if (fansOn) sim.statusText = 'COOLING';
+            else sim.statusText = 'STANDBY';
+        }
+
+        function drawControllerLCD() {
+            const ctx = lcdCtx;
+            if (sim.battFuseState !== 'ok' && sim.sunlight < 0.05) {
+                ctx.fillStyle = '#2a332b';
+                ctx.fillRect(0, 0, 256, 160);
+                lcdTex.needsUpdate = true;
+                return;
+            }
+
+            ctx.fillStyle = '#89b497';
+            ctx.fillRect(0, 0, 256, 160);
+            ctx.strokeStyle = '#1b2b20';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(4, 4, 248, 152);
+
+            ctx.fillStyle = '#0e1912';
+            if (sim.battFuseState !== 'ok') {
+                ctx.font = 'bold 34px monospace';
+                ctx.fillText('NO BAT', 62, 85);
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText(`PV: ${sim.pvVoltage.toFixed(1)}V`, 72, 125);
+                lcdTex.needsUpdate = true;
+                return;
+            }
+
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText(sim.sunlight > 0.05 ? '☀' : '☾', 20, 32);
+            if (sim.pvCurrent > 0.02) ctx.fillText('➔', 54, 32);
+
+            ctx.strokeRect(92, 14, 52, 22);
+            ctx.fillRect(144, 19, 5, 12);
+            const bars = Math.ceil((sim.soc / 100) * 4);
+            for (let b = 0; b < bars; b++) ctx.fillRect(96 + b * 11, 18, 8, 14);
+
+            if (sim.controllerLoadOn) {
+                ctx.fillText('➔', 162, 32);
+                ctx.fillText('💡', 198, 32);
+            }
+
+            ctx.font = 'bold 48px monospace';
+            ctx.fillText(`${sim.battVoltage.toFixed(1)}V`, 56, 94);
+
+            ctx.font = 'bold 17px monospace';
+            ctx.fillText(`PV:${sim.pvCurrent.toFixed(1)}A`, 18, 138);
+            ctx.fillText(`LD:${sim.loadCurrent.toFixed(2)}A`, 132, 138);
+
+            lcdTex.needsUpdate = true;
+        }
+
+        function drawXH3002Display() {
+            const ctx = xhCtx;
+            ctx.fillStyle = '#120808';
+            ctx.fillRect(0, 0, 256, 128);
+
+            if (!sim.xhPowered) {
+                xhTex.needsUpdate = true;
+                return;
+            }
+
+            ctx.fillStyle = '#ff2a2a';
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 12;
+            ctx.font = 'bold 74px "Consolas", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            let dispStr = sim.temp.toFixed(1);
+            if (sim.xhMenuMode === 1) dispStr = sim.xhStartTemp.toFixed(1);
+            if (sim.xhMenuMode === 2) dispStr = sim.xhStopTemp.toFixed(1);
+
+            ctx.fillText(dispStr, 124, 68);
+            ctx.shadowBlur = 0;
+
+            ctx.font = 'bold 16px sans-serif';
+            if (sim.xhMenuMode === 1) { ctx.fillStyle = '#fca5a5'; ctx.fillText('START', 42, 20); }
+            else if (sim.xhMenuMode === 2) { ctx.fillStyle = '#fca5a5'; ctx.fillText('STOP', 42, 20); }
+
+            ctx.fillStyle = sim.xhRelayClosed ? '#ff3333' : '#3a1616';
+            ctx.beginPath();
+            ctx.arc(228, 28, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('OUT', 228, 50);
+
+            xhTex.needsUpdate = true;
+        }
+
+        function updateHUD() {
+            document.getElementById('lbl-sun').textContent = Math.round(sim.sunlight * 100) + '%';
+            document.getElementById('lbl-temp').textContent = sim.temp.toFixed(1) + '°C';
+            document.getElementById('lbl-soc').textContent = Math.round(sim.soc) + '%';
+            document.getElementById('sl-soc').value = sim.soc;
+
+            const sw2Btn = document.getElementById('hud-sw2');
+            sw2Btn.textContent = sim.switch2PinOn ? 'ON' : 'OFF';
+            sw2Btn.className = 'btn ' + (sim.switch2PinOn ? 'active' : '');
+
+            const sw3Btn = document.getElementById('hud-sw3');
+            sw3Btn.textContent = sim.switch3PinMode;
+            sw3Btn.className = 'btn ' + (sim.switch3PinMode !== 'OFF' ? 'active' : '');
+
+            document.getElementById('lbl-xh-set').textContent = `${sim.xhStartTemp.toFixed(1)}° / ${sim.xhStopTemp.toFixed(1)}°`;
+
+            const f1 = document.getElementById('hud-f1');
+            f1.textContent = `Batt Fuse: ${sim.battFuseState.toUpperCase()}`;
+            f1.className = 'btn ' + (sim.battFuseState === 'ok' ? 'warn' : 'danger');
+
+            const f2 = document.getElementById('hud-f2');
+            f2.textContent = `Load Fuse: ${sim.loadFuseState.toUpperCase()}`;
+            f2.className = 'btn ' + (sim.loadFuseState === 'ok' ? 'warn' : 'danger');
+
+            document.getElementById('tel-pv').textContent = `${sim.pvVoltage.toFixed(1)}V / ${sim.pvCurrent.toFixed(1)}A`;
+            document.getElementById('tel-batt').textContent = sim.battFuseState === 'ok'
+                ? `${sim.battVoltage.toFixed(1)}V (${sim.netBattCurrent >= 0 ? '+' : ''}${sim.netBattCurrent.toFixed(1)}A)`
+                : 'DISCONN';
+            document.getElementById('tel-load').textContent = `${sim.loadCurrent.toFixed(2)}A`;
+
+            const relEl = document.getElementById('tel-relay');
+            relEl.textContent = !sim.xhPowered ? 'UNPOWERED' : (sim.xhRelayClosed ? 'CLOSED (ON)' : 'OPEN (OFF)');
+            relEl.className = 'tele-val ' + (sim.xhRelayClosed ? 'good' : '');
+
+            const fanEl = document.getElementById('tel-fan');
+            fanEl.textContent = `${sim.fanRPM} RPM`;
+            fanEl.className = 'tele-val ' + (sim.fanRPM > 0 ? 'good' : '');
+
+            const statEl = document.getElementById('tel-stat');
+            statEl.textContent = sim.statusText;
+            statEl.className = 'tele-val ' + (
+                sim.statusText.includes('NO') || sim.statusText.includes('BLOWN') ? 'bad' :
+                    sim.statusText.includes('CHG') || sim.statusText.includes('COOLING') ? 'good' : 'warn'
+            );
+        }
+
+        // =========================================================================
+        // 8. MAIN ANIMATION LOOP
+        // =========================================================================
+        const clock = new THREE.Clock();
+        let hudTimer = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+
+            stepSimulation(dt);
+            drawControllerLCD();
+            drawXH3002Display();
+
+            sunLight.intensity = 0.2 + sim.sunlight * 1.5;
+
+            sw2Pivot.rotation.x += ((sim.switch2PinOn ? -0.25 : 0.25) - sw2Pivot.rotation.x) * 0.25;
+            const targetSw3Rot = sim.switch3PinMode === 'MANUAL' ? 0.55 : (sim.switch3PinMode === 'AUTO' ? -0.55 : 0);
+            sw3LeverPivot.rotation.z += (targetSw3Rot - sw3LeverPivot.rotation.z) * 0.25;
+
+            [
+                { obj: battFuse3D, state: sim.battFuseState },
+                { obj: loadFuse3D, state: sim.loadFuseState }
+            ].forEach(f => {
+                if (f.state === 'removed') {
+                    f.obj.bladeGroup.position.y = 1.45;
+                    f.obj.bladeGroup.rotation.z = 0.25;
+                    f.obj.plasticMat.color.setHex(0xe66a1c);
+                    f.obj.filament.visible = true;
+                    f.obj.filMat.color.setHex(0xffd580);
+                } else if (f.state === 'blown') {
+                    f.obj.bladeGroup.position.y = 0.35;
+                    f.obj.bladeGroup.rotation.z = 0;
+                    f.obj.plasticMat.color.setHex(0x4a2a18);
+                    f.obj.filament.visible = false;
+                } else {
+                    f.obj.bladeGroup.position.y = 0.35;
+                    f.obj.bladeGroup.rotation.z = 0;
+                    f.obj.plasticMat.color.setHex(0xe66a1c);
+                    f.obj.filament.visible = true;
+                    f.obj.filMat.color.setHex(0xffd580);
+                }
+            });
+
+            if (sim.fanRPM > 0) {
+                sim.fanAngle += (sim.fanRPM / 60) * Math.PI * 2 * 0.35 * dt;
+                fans.forEach(r => r.rotation.y = sim.fanAngle);
+            }
+
+            airMat.opacity = sim.fanRPM > 0 ? 0.55 : 0;
+            if (sim.fanRPM > 0) {
+                const posArr = airGeo.attributes.position.array;
+                const speedScale = sim.fanRPM / 2400;
+                for (let i = 0; i < airCount; i++) {
+                    posArr[i * 3 + 1] += airData[i].speed * speedScale * dt;
+                    if (posArr[i * 3 + 1] > 3.4) posArr[i * 3 + 1] = 0.55;
+                }
+                airGeo.attributes.position.needsUpdate = true;
+            }
+
+            if (sparkLife > 0) {
+                sparkLife -= dt;
+                sparkMat.opacity = Math.max(0, sparkLife);
+                const sArr = sparkGeo.attributes.position.array;
+                for (let i = 0; i < sparkCount; i++) {
+                    sparkVels[i].y -= 9.8 * dt;
+                    sArr[i * 3] += sparkVels[i].x * dt;
+                    sArr[i * 3 + 1] = Math.max(0.05, sArr[i * 3 + 1] + sparkVels[i].y * dt);
+                    sArr[i * 3 + 2] += sparkVels[i].z * dt;
+                }
+                sparkGeo.attributes.position.needsUpdate = true;
+            }
+
+            // Current Flow Speeds (positive = forward along wire curve, negative = reverse)
+            const battOk = sim.battFuseState === 'ok';
+            const loadPreActive = battOk && sim.controllerLoadOn && sim.loadFuseState === 'ok';
+            const postSwActive = loadPreActive && sim.switch2PinOn;
+            const fansActive = sim.fanRPM > 0;
+
+            // Battery direction: negative speed when charging INTO battery, positive when discharging OUT
+            let battFlow = 0;
+            if (battOk && Math.abs(sim.netBattCurrent) > 0.02) {
+                const mag = 0.35 + Math.abs(sim.netBattCurrent) * 0.45;
+                battFlow = sim.netBattCurrent > 0 ? -mag : mag;
+            }
+
+            const activeMap = {
+                pv: sim.pvCurrent > 0.02 ? 0.3 + sim.pvCurrent * 0.5 : 0,
+                batt: battFlow,
+                loadPre: postSwActive ? 0.35 + sim.loadCurrent * 0.5 : 0,
+                loadPost: postSwActive ? 0.35 + sim.loadCurrent * 0.5 : 0,
+                xhPower: sim.xhPowered ? 0.35 : 0,
+                manualBranch: (postSwActive && sim.switch3PinMode === 'MANUAL') ? 0.65 : 0,
+                autoBranch: (postSwActive && sim.switch3PinMode === 'AUTO' && sim.xhRelayClosed) ? 0.55 : 0,
+                fans: fansActive ? 0.7 : 0,
+                gndBusFans: fansActive ? 0.7 : 0,
+                gndBusMain: postSwActive ? 0.35 + sim.loadCurrent * 0.5 : 0,
+                idle: 0
+            };
+
+            wireSegments.forEach(seg => {
+                const flowSpeed = activeMap[seg.key] || 0;
+                seg.mat.emissiveIntensity = flowSpeed !== 0 ? 0.25 : 0.04;
+                seg.dots.forEach(d => {
+                    if (flowSpeed !== 0) {
+                        d.mesh.visible = true;
+                        d.t = ((d.t + flowSpeed * dt * 0.45) % 1 + 1) % 1;
+                        seg.curve.getPointAt(d.t, d.mesh.position);
+                    } else {
+                        d.mesh.visible = false;
+                    }
+                });
+            });
+
+            if (camTween) {
+                camTween.progress = Math.min(1, camTween.progress + dt * 2.2);
+                const ease = 1 - Math.pow(1 - camTween.progress, 3);
+                camera.position.lerpVectors(camTween.fromPos, camTween.toPos, ease);
+                controls.target.lerpVectors(camTween.fromTgt, camTween.toTgt, ease);
+                if (camTween.progress >= 1) camTween = null;
+            }
+
+            hudTimer += dt;
+            if (hudTimer > 0.15) {
+                updateHUD();
+                hudTimer = 0;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        updateHUD();
+        animate();
+    </script>
+</body>
+
+</html>
